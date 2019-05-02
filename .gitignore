@@ -2,6 +2,6 @@
 .ipynb_checkpoints
 data
 *.0
-
+__pychache__
 
 
