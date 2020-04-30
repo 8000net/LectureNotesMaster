@@ -30,6 +30,7 @@ class DQN(nn.Module):
         )
 
     def _get_conv_out(self, shape):
+        # size calcualtion
         o = self.conv(torch.zeros(1, *shape))
         return int(np.prod(o.size()))
 
@@ -94,19 +95,27 @@ class ProcessFrame84(gym.ObservationWrapper):
         self.observation_space = gym.spaces.Box(low=0, high=255, shape=(84, 84, 1), dtype=np.uint8)
 
     def observation(self, obs):
+        # return resized and gray image
         return ProcessFrame84.process(obs)
 
     @staticmethod
     def process(frame):
+        # resize the vector given to be an image 
+        
         if frame.size == 210 * 160 * 3:
             img = np.reshape(frame, [210, 160, 3]).astype(np.float32)
         elif frame.size == 250 * 160 * 3:
             img = np.reshape(frame, [250, 160, 3]).astype(np.float32)
         else:
             assert False, "Unknown resolution."
+            
+        # make this gray scale
         img = img[:, :, 0] * 0.299 + img[:, :, 1] * 0.587 + img[:, :, 2] * 0.114
+        # now resize it to be smaller. 
         resized_screen = cv2.resize(img, (84, 110), interpolation=cv2.INTER_AREA)
+        # take off the top and bottom (scores and boundary, not needed here)
         x_t = resized_screen[18:102, :]
+        # this last step, I have no idea what they are doing
         x_t = np.reshape(x_t, [84, 84, 1])
         return x_t.astype(np.uint8)
 
@@ -115,15 +124,19 @@ class ImageToPyTorch(gym.ObservationWrapper):
     def __init__(self, env):
         super(ImageToPyTorch, self).__init__(env)
         old_shape = self.observation_space.shape
+        # remember that a box is just a tensor
+        # convert the timage to pytorch from numpy
         self.observation_space = gym.spaces.Box(low=0.0, high=1.0, shape=(old_shape[-1], old_shape[0], old_shape[1]),
                                                 dtype=np.float32)
 
     def observation(self, observation):
+        # make observation channels first (axis 2 gets moved to axis 0
         return np.moveaxis(observation, 2, 0)
 
 
 class ScaledFloatFrame(gym.ObservationWrapper):
     def observation(self, obs):
+        # observaiton becomes normalized 0-1
         return np.array(obs).astype(np.float32) / 255.0
 
 
@@ -140,6 +153,7 @@ class BufferWrapper(gym.ObservationWrapper):
         return self.observation(self.env.reset())
 
     def observation(self, observation):
+        # keep queue of observation FIFO
         self.buffer[:-1] = self.buffer[1:]
         self.buffer[-1] = observation
         return self.buffer
