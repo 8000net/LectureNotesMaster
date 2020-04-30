@@ -37,9 +37,38 @@ class DQN(nn.Module):
     def forward(self, x):
         conv_out = self.conv(x).view(x.size()[0], -1)
         return self.fc(conv_out)
-    
+
+#---------------------------------------------------------
+class MaxAndSkipEnv(gym.Wrapper):
+    def __init__(self, env=None, skip=4):
+        """Return only every `skip`-th frame"""
+        super(MaxAndSkipEnv, self).__init__(env)
+        # most recent raw observations (for max pooling across time steps)
+        self._obs_buffer = collections.deque(maxlen=2)
+        self._skip = skip
+
+    def step(self, action):
+        total_reward = 0.0
+        done = None
+        for _ in range(self._skip):
+            obs, reward, done, info = self.env.step(action)
+            self._obs_buffer.append(obs)
+            total_reward += reward
+            if done:
+                break
+        # max pool across the stacked observation frames
+        max_frame = np.max(np.stack(self._obs_buffer), axis=0)
+        return max_frame, total_reward, done, info
+
+    def reset(self):
+        """Clear past frame buffer and init. to first obs. from inner env."""
+        self._obs_buffer.clear()
+        obs = self.env.reset()
+        self._obs_buffer.append(obs)
+        return obs
 
 
+#---------------------------------------------------------
 class FireResetEnv(gym.Wrapper):
     def __init__(self, env=None):
         """For environments where the user need to press FIRE for the game to start."""
@@ -59,36 +88,8 @@ class FireResetEnv(gym.Wrapper):
         if done:
             self.env.reset()
         return obs
-
-
-class MaxAndSkipEnv(gym.Wrapper):
-    def __init__(self, env=None, skip=4):
-        """Return only every `skip`-th frame"""
-        super(MaxAndSkipEnv, self).__init__(env)
-        # most recent raw observations (for max pooling across time steps)
-        self._obs_buffer = collections.deque(maxlen=2)
-        self._skip = skip
-
-    def step(self, action):
-        total_reward = 0.0
-        done = None
-        for _ in range(self._skip):
-            obs, reward, done, info = self.env.step(action)
-            self._obs_buffer.append(obs)
-            total_reward += reward
-            if done:
-                break
-        max_frame = np.max(np.stack(self._obs_buffer), axis=0)
-        return max_frame, total_reward, done, info
-
-    def reset(self):
-        """Clear past frame buffer and init. to first obs. from inner env."""
-        self._obs_buffer.clear()
-        obs = self.env.reset()
-        self._obs_buffer.append(obs)
-        return obs
-
-
+    
+#---------------------------------------------------------    
 class ProcessFrame84(gym.ObservationWrapper):
     def __init__(self, env=None):
         super(ProcessFrame84, self).__init__(env)
@@ -119,7 +120,7 @@ class ProcessFrame84(gym.ObservationWrapper):
         x_t = np.reshape(x_t, [84, 84, 1])
         return x_t.astype(np.uint8)
 
-
+#---------------------------------------------------------
 class ImageToPyTorch(gym.ObservationWrapper):
     def __init__(self, env):
         super(ImageToPyTorch, self).__init__(env)
@@ -133,13 +134,7 @@ class ImageToPyTorch(gym.ObservationWrapper):
         # make observation channels first (axis 2 gets moved to axis 0
         return np.moveaxis(observation, 2, 0)
 
-
-class ScaledFloatFrame(gym.ObservationWrapper):
-    def observation(self, obs):
-        # observaiton becomes normalized 0-1
-        return np.array(obs).astype(np.float32) / 255.0
-
-
+#---------------------------------------------------------
 class BufferWrapper(gym.ObservationWrapper):
     def __init__(self, env, n_steps, dtype=np.float32):
         super(BufferWrapper, self).__init__(env)
@@ -157,13 +152,19 @@ class BufferWrapper(gym.ObservationWrapper):
         self.buffer[:-1] = self.buffer[1:]
         self.buffer[-1] = observation
         return self.buffer
+    
+#---------------------------------------------------------    
+class ScaledFloatFrame(gym.ObservationWrapper):
+    def observation(self, obs):
+        # observaiton becomes normalized 0-1
+        return np.array(obs).astype(np.float32) / 255.0
 
-
+#=========================================================
 def make_env(env_name):
-    env = gym.make(env_name)
-    env = MaxAndSkipEnv(env)
-    env = FireResetEnv(env)
-    env = ProcessFrame84(env)
-    env = ImageToPyTorch(env)
-    env = BufferWrapper(env, 4)
-    return ScaledFloatFrame(env)
+    env = gym.make(env_name) # get pong environment
+    env = MaxAndSkipEnv(env) # max pool across two adjacent frames
+    env = FireResetEnv(env) # if the game has a 'fire' and 'reset' button
+    env = ProcessFrame84(env) # resize and convert to gray scale
+    env = ImageToPyTorch(env) # make torch tensor instead of numpy
+    env = BufferWrapper(env, 4) # use last four consecutive frames for obs space
+    return ScaledFloatFrame(env) # normalize frames 0-1 rather than 0-255
