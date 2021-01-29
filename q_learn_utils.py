@@ -116,7 +116,7 @@ class ProcessFrame84(gym.ObservationWrapper):
         resized_screen = cv2.resize(img, (84, 110), interpolation=cv2.INTER_AREA)
         # take off the top and bottom (scores and boundary, not needed here)
         x_t = resized_screen[18:102, :]
-        # this last step, I have no idea what they are doing
+        # this last step, this was an artifact o the 2013 GPU limitations
         x_t = np.reshape(x_t, [84, 84, 1])
         return x_t.astype(np.uint8)
 
