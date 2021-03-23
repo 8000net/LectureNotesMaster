@@ -5,4 +5,4 @@ data
 __pycache__
 images/wgangp_images/
 models/vgg_decoder/
-
+models/gan_models/
