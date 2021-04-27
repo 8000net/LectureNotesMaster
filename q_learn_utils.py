@@ -30,7 +30,7 @@ class DQN(nn.Module):
         )
 
     def _get_conv_out(self, shape):
-        # size calcualtion
+        # size calculation
         o = self.conv(torch.zeros(1, *shape))
         return int(np.prod(o.size()))
 
@@ -44,6 +44,9 @@ class MaxAndSkipEnv(gym.Wrapper):
         """Return only every `skip`-th frame"""
         super(MaxAndSkipEnv, self).__init__(env)
         # most recent raw observations (for max pooling across time steps)
+        # we will run across "skip" interactions, and take a max pool across 
+        # the last two interactions
+        # we will take the same action four times in a row
         self._obs_buffer = collections.deque(maxlen=2)
         self._skip = skip
 
@@ -149,14 +152,14 @@ class BufferWrapper(gym.ObservationWrapper):
 
     def observation(self, observation):
         # keep queue of observation FIFO
-        self.buffer[:-1] = self.buffer[1:]
-        self.buffer[-1] = observation
+        self.buffer[:-1] = self.buffer[1:] # out with the old
+        self.buffer[-1] = observation # in with the new
         return self.buffer
     
 #---------------------------------------------------------    
 class ScaledFloatFrame(gym.ObservationWrapper):
     def observation(self, obs):
-        # observaiton becomes normalized 0-1
+        # observation becomes normalized 0-1
         return np.array(obs).astype(np.float32) / 255.0
 
 #=========================================================
