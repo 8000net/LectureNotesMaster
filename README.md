@@ -1,15 +1,5 @@
 ### Required Jupyter Plugins
 
-The following Jupyter Notebook plugins are required for these presentations
+This repository covers topics from the course CS8321 Machine Learning and Neural Networks, offered at Southern Methodist University from Dr. Eric Larson. 
 
-* Table of Contents Plugin
-* Code-Cell Locking Plugin
-
-Find installation instructions at:
-https://github.com/ipython-contrib/jupyter_contrib_nbextensions
-
-`pip install jupyter_contrib_nbextensions`
-
-`jupyter contrib nbextension install --user`
-
-
+Examples given here are meant to be companions to lectures--however many of the notebooks stand alone as nice examples. 
