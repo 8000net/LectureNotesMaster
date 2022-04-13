@@ -7,4 +7,5 @@ images/wgangp_images/
 models/vgg_decoder/
 models/gan_models/
 models/138k/
+sync_batchnorm/__pycache__/
 
